@@ -48,8 +48,11 @@ except ImportError:
     def get_ident(): return 0
 
 if sys.platform == "win32":
-    # On Windows, the best timer is time.clock()
-    default_timer = time.clock
+    # On Windows, the best timer is time.clock() until python 3.3 which deprecates time.clock()
+    if sys.version_info[1] < 3:
+        default_timer = time.clock
+    else:
+        default_timer = time.perf_counter
 else:
     # On most other platforms the best timer is time.time()
     default_timer = time.time
@@ -138,6 +141,8 @@ class MStats2(object):
         if self._frac_loss is None:
             if self.pktsSent > 0:
                 self._frac_loss = self.pktsLost / self.pktsSent
+            else:
+                self._frac_loss = 1.0
         return self._frac_loss
 
     def packet_sent(self, n=1):
@@ -494,7 +499,7 @@ def verbose_ping(hostname, timeout=3000, count=3,
     while 1:
         delay = single_ping(destIP, hostname, timeout, mySeqNumber,
                             numDataBytes, ipv6=ipv6, myStats=myStats, sourceIP=sourceIP)
-        delay = 0 if delay is None else delay[0]
+        delay = 0 if delay is None or delay[0] is None else delay[0]
 
         mySeqNumber += 1
 
